@@ -7,6 +7,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountData } from "~/hooks/useAccountData"
 import {
   createDisplayAccountApiContext,
+  fetchDisplayAccountTokens,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { getManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
@@ -464,8 +465,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       }))
 
       try {
-        const { service, request } = createDisplayAccountApiContext(account)
-        const tokens = await service.fetchAccountTokens(request)
+        const tokens = await fetchDisplayAccountTokens(account)
 
         if (!isEpochActive(loadEpoch)) return
         if (!isLatestAccountRequest(accountId, requestEpoch)) return
