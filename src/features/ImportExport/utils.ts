@@ -12,9 +12,9 @@ import {
   ImportExportError,
   importFromBackupObject as importFromBackupObjectService,
   normalizeBackupForMerge,
-  type BackupAccountKeySnapshotError,
   parseBackupSummary,
   type BackupAccountKeySnapshot,
+  type BackupAccountKeySnapshotError,
   type BackupAccountsPartialV2,
   type BackupFullV2,
   type BackupPreferencesPartialV2,
@@ -38,8 +38,6 @@ const logger = createLogger("ImportExportUtils")
 
 export { BACKUP_VERSION, normalizeBackupForMerge, parseBackupSummary }
 export type {
-  BackupAccountKeySnapshot,
-  BackupAccountKeySnapshotError,
   BackupFullV2,
   BackupPreferencesPartialV2,
   BackupV2,
@@ -50,7 +48,7 @@ interface ExportOptions {
   includeAccountKeys?: boolean
 }
 
-export interface PreparedExportResult<TData> {
+interface PreparedExportResult<TData> {
   data: TData
   accountKeySnapshots: BackupAccountKeySnapshot[]
   accountKeySnapshotErrors: BackupAccountKeySnapshotError[]
@@ -129,15 +127,19 @@ const buildAccountKeySnapshots = async (
   const displayAccounts = accountStorage.convertToDisplayData(
     accountData.accounts,
   )
-  const manageableAccounts = displayAccounts.filter(canManageDisplayAccountTokens)
+  const manageableAccounts = displayAccounts.filter(
+    canManageDisplayAccountTokens,
+  )
 
   const results = await Promise.all(
     manageableAccounts.map(async (account) => {
       try {
-      const tokens = await fetchDisplayAccountTokens(account)
-      const resolvedTokens = await Promise.all(
-        tokens.map((token) => resolveDisplayAccountTokenForSecret(account, token)),
-      )
+        const tokens = await fetchDisplayAccountTokens(account)
+        const resolvedTokens = await Promise.all(
+          tokens.map((token) =>
+            resolveDisplayAccountTokenForSecret(account, token),
+          ),
+        )
 
         return {
           ok: true as const,
@@ -209,7 +211,7 @@ export async function importFromBackupObject(
   }
 }
 
-export const prepareFullExport = async (
+const prepareFullExport = async (
   options?: ExportOptions,
 ): Promise<PreparedExportResult<BackupFullV2>> => {
   const accountDataPromise = accountStorage.exportData()
@@ -252,13 +254,15 @@ export const prepareFullExport = async (
   }
 }
 
-export const prepareAccountsExport = async (
+const prepareAccountsExport = async (
   options?: ExportOptions,
 ): Promise<PreparedExportResult<BackupAccountsPartialV2>> => {
   const accountData = await accountStorage.exportData()
   const [tagStore, accountKeyExportResult] = await Promise.all([
     tagStorage.exportTagStore(),
-    options?.includeAccountKeys ? buildAccountKeySnapshots(accountData) : undefined,
+    options?.includeAccountKeys
+      ? buildAccountKeySnapshots(accountData)
+      : undefined,
   ])
 
   const data = withOptionalAccountKeySections(
@@ -279,7 +283,7 @@ export const prepareAccountsExport = async (
   }
 }
 
-export const preparePreferencesExport = async (): Promise<
+const preparePreferencesExport = async (): Promise<
   PreparedExportResult<BackupPreferencesPartialV2>
 > => {
   const preferencesData = await userPreferences.exportPreferences()
@@ -296,7 +300,7 @@ export const preparePreferencesExport = async (): Promise<
   }
 }
 
-export const downloadPreparedExport = <TData extends object>(
+const downloadPreparedExport = <TData extends object>(
   prepared: PreparedExportResult<TData>,
   filename: string,
 ) => {

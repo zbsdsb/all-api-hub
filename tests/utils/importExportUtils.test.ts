@@ -11,11 +11,11 @@ import {
   type RawBackupData,
 } from "~/features/ImportExport/utils"
 import { accountStorage } from "~/services/accounts/accountStorage"
-import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import {
   fetchDisplayAccountTokens,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { tagStorage } from "~/services/tags/tagStorage"
@@ -32,6 +32,7 @@ vi.mock("~/services/accounts/accountStorage", () => ({
 }))
 
 vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
+  canManageDisplayAccountTokens: vi.fn((account) => Boolean(account)),
   fetchDisplayAccountTokens: vi.fn(),
   resolveDisplayAccountTokenForSecret: vi.fn(),
 }))
@@ -91,6 +92,9 @@ const mockAccountStorageExportData =
   accountStorage.exportData as unknown as ReturnType<typeof vi.fn>
 const mockAccountStorageConvertToDisplayData =
   accountStorage.convertToDisplayData as unknown as ReturnType<typeof vi.fn>
+const mockCanManageDisplayAccountTokens = (
+  await import("~/services/accounts/utils/apiServiceRequest")
+).canManageDisplayAccountTokens as unknown as ReturnType<typeof vi.fn>
 const mockFetchDisplayAccountTokens =
   fetchDisplayAccountTokens as unknown as ReturnType<typeof vi.fn>
 const mockResolveDisplayAccountTokenForSecret =
@@ -793,6 +797,9 @@ describe("export handlers", () => {
     mockResolveDisplayAccountTokenForSecret.mockImplementation(
       async (_account, token) => token,
     )
+    mockCanManageDisplayAccountTokens.mockImplementation((account) =>
+      Boolean(account),
+    )
   })
 
   afterEach(() => {
@@ -821,7 +828,19 @@ describe("export handlers", () => {
     const blob = createObjectUrl.mock.calls[0]?.[0] as Blob
 
     expect(blob).toBeInstanceOf(Blob)
-    return blob.text().then((text) => JSON.parse(text))
+    return new Promise<Record<string, unknown>>((resolve, reject) => {
+      const reader = new FileReader()
+
+      reader.onload = () => {
+        try {
+          resolve(JSON.parse(String(reader.result ?? "")))
+        } catch (error) {
+          reject(error)
+        }
+      }
+      reader.onerror = () => reject(reader.error)
+      reader.readAsText(blob)
+    })
   }
 
   it("handleExportAll exports accounts, preferences and channelConfigs", async () => {
@@ -1064,7 +1083,7 @@ describe("export handlers", () => {
     ])
     mockFetchDisplayAccountTokens.mockRejectedValueOnce(
       new Error(
-        "<!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title></head><body>challenge</body></html>",
+        '<!DOCTYPE html><html lang="en-US"><head><title>Just a moment...</title></head><body>challenge</body></html>',
       ),
     )
 
