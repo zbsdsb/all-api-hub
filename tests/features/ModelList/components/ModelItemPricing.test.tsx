@@ -6,9 +6,16 @@ import { ModelItemPerCallPricingView } from "~/features/ModelList/components/Mod
 import { PriceView } from "~/features/ModelList/components/ModelItem/ModelItemPicingView"
 import { ModelItemPricing } from "~/features/ModelList/components/ModelItem/ModelItemPricing"
 
-const { formatPriceCompactMock, isTokenBillingTypeMock } = vi.hoisted(() => ({
+const {
+  formatPriceCompactMock,
+  getEndpointTypesTextMock,
+  isTokenBillingTypeMock,
+} = vi.hoisted(() => ({
   formatPriceCompactMock: vi.fn(
     (price: number, currency?: string) => `${currency}:${price}`,
+  ),
+  getEndpointTypesTextMock: vi.fn(
+    (endpointTypes?: string[]) => endpointTypes?.join(", ") ?? "not-provided",
   ),
   isTokenBillingTypeMock: vi.fn(),
 }))
@@ -34,6 +41,8 @@ vi.mock("~/services/models/utils/modelPricing", async (importOriginal) => {
     ...actual,
     formatPriceCompact: (price: number, currency?: string) =>
       formatPriceCompactMock(price, currency),
+    getEndpointTypesText: (endpointTypes?: string[]) =>
+      getEndpointTypesTextMock(endpointTypes),
     isTokenBillingType: (quotaType: number) =>
       isTokenBillingTypeMock(quotaType),
   }
@@ -55,6 +64,7 @@ const createModel = (overrides?: Record<string, unknown>) =>
     model_description: "Fast multimodal model",
     quota_type: 0,
     model_ratio: 3,
+    supported_endpoint_types: ["chat", "responses"],
     ...overrides,
   }) as any
 
@@ -63,6 +73,9 @@ describe("Model item pricing and description", () => {
     vi.clearAllMocks()
     formatPriceCompactMock.mockImplementation(
       (price: number, currency?: string) => `${currency}:${price}`,
+    )
+    getEndpointTypesTextMock.mockImplementation(
+      (endpointTypes?: string[]) => endpointTypes?.join(", ") ?? "not-provided",
     )
     isTokenBillingTypeMock.mockReturnValue(true)
   })
@@ -221,6 +234,7 @@ describe("Model item pricing and description", () => {
           showRealPrice={false}
           showPricing={false}
           showRatioColumn={true}
+          showEndpointTypes={false}
           isAvailableForUser={true}
         />,
       )
@@ -239,6 +253,7 @@ describe("Model item pricing and description", () => {
           showRealPrice={false}
           showPricing={true}
           showRatioColumn={true}
+          showEndpointTypes={true}
           isAvailableForUser={false}
         />,
       )
@@ -246,6 +261,8 @@ describe("Model item pricing and description", () => {
       expect(screen.getByText("USD:1.25/M")).toBeInTheDocument()
       expect(screen.getByText("ratio")).toBeInTheDocument()
       expect(screen.getByText("3.5x")).toHaveClass("text-gray-500")
+      expect(screen.getByText("endpointType")).toBeInTheDocument()
+      expect(screen.getByText("chat, responses")).toHaveClass("text-gray-500")
     })
 
     it("uses the active ratio styling for available token-billing models", () => {
@@ -259,6 +276,7 @@ describe("Model item pricing and description", () => {
           showRealPrice={false}
           showPricing={true}
           showRatioColumn={true}
+          showEndpointTypes={false}
           isAvailableForUser={true}
         />,
       )
@@ -277,6 +295,7 @@ describe("Model item pricing and description", () => {
           showRealPrice={false}
           showPricing={true}
           showRatioColumn={false}
+          showEndpointTypes={true}
           isAvailableForUser={true}
         />,
       )
@@ -284,6 +303,7 @@ describe("Model item pricing and description", () => {
       expect(screen.getByText("perCall")).toBeInTheDocument()
       expect(screen.getByText("USD:6")).toBeInTheDocument()
       expect(screen.queryByText("ratio")).toBeNull()
+      expect(screen.getByText("endpointType")).toBeInTheDocument()
     })
 
     it("omits the pricing body when a per-call model has no computed per-call price", () => {
@@ -297,12 +317,35 @@ describe("Model item pricing and description", () => {
           showRealPrice={false}
           showPricing={true}
           showRatioColumn={false}
+          showEndpointTypes={false}
           isAvailableForUser={true}
         />,
       )
 
       expect(screen.queryByText("perCall")).toBeNull()
       expect(screen.queryByText("ratio")).toBeNull()
+    })
+
+    it("renders endpoint types even when pricing metadata is unavailable", () => {
+      render(
+        <ModelItemPricing
+          model={createModel({
+            supported_endpoint_types: ["chat", "responses"],
+          })}
+          calculatedPrice={createCalculatedPrice()}
+          exchangeRate={5}
+          showRealPrice={false}
+          showPricing={false}
+          showRatioColumn={false}
+          showEndpointTypes={true}
+          isAvailableForUser={true}
+        />,
+      )
+
+      expect(screen.getByText("endpointType")).toBeInTheDocument()
+      expect(screen.getByText("chat, responses")).toHaveClass("text-gray-900")
+      expect(screen.queryByText("ratio")).toBeNull()
+      expect(screen.queryByText("USD:1.25/M")).toBeNull()
     })
   })
 })

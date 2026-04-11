@@ -101,6 +101,7 @@ export default function ModelItem(props: ModelItemProps) {
   const showGroupDetails =
     source.kind === "account" && displayCapabilities.supportsGroupFiltering
   const canExpand = source.kind === "account" && showGroupDetails
+  const shouldRenderExpandedDetails = canExpand && isExpanded
 
   // 检查模型是否对当前用户分组可用
   const isAvailableForUser = showGroupDetails
@@ -171,16 +172,17 @@ export default function ModelItem(props: ModelItemProps) {
           showRealPrice={showRealPrice}
           showPricing={showPricing}
           showRatioColumn={showRatioColumn}
+          showEndpointTypes={showEndpointTypes}
           isAvailableForUser={isAvailableForUser}
         />
 
         {/* 折叠展开的详细信息 */}
-        {isExpanded && source.kind === "account" && (
+        {shouldRenderExpandedDetails && (
           <div className="border-t pt-4 dark:border-gray-700">
             <ModelItemDetails
               model={model}
               calculatedPrice={calculatedPrice}
-              showEndpointTypes={showEndpointTypes}
+              showEndpointTypes={false}
               userGroup={userGroup}
               showGroupDetails={showGroupDetails}
               showPricingDetails={showPricing}

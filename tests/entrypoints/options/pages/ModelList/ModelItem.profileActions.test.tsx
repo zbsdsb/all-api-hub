@@ -104,6 +104,87 @@ describe("ModelItem profile actions", () => {
     )
   })
 
+  it("renders endpoint types inline for non-expandable profile rows and respects the toggle", async () => {
+    const profileSource = createProfileSource({
+      id: "profile-1",
+      name: "Reusable Key",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://profile.example.com",
+      apiKey: "sk-secret",
+      tagIds: [],
+      notes: "",
+      createdAt: 1,
+      updatedAt: 2,
+    })
+
+    const { rerender } = render(
+      <ModelItem
+        model={{
+          model_name: "gpt-4o-mini",
+          quota_type: 0,
+          model_ratio: 0,
+          model_price: 0,
+          completion_ratio: 1,
+          enable_groups: [],
+          supported_endpoint_types: ["chat", "responses"],
+        }}
+        calculatedPrice={{
+          inputUSD: 0,
+          outputUSD: 0,
+          inputCNY: 0,
+          outputCNY: 0,
+        }}
+        exchangeRate={1}
+        showRealPrice={false}
+        showRatioColumn={false}
+        showEndpointTypes={true}
+        userGroup="default"
+        availableGroups={[]}
+        source={profileSource}
+      />,
+    )
+
+    expect(
+      await screen.findByText("modelList:endpointType"),
+    ).toBeInTheDocument()
+    expect(screen.getByText("chat, responses")).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "modelList:expandDetails",
+      }),
+    ).not.toBeInTheDocument()
+
+    rerender(
+      <ModelItem
+        model={{
+          model_name: "gpt-4o-mini",
+          quota_type: 0,
+          model_ratio: 0,
+          model_price: 0,
+          completion_ratio: 1,
+          enable_groups: [],
+          supported_endpoint_types: ["chat", "responses"],
+        }}
+        calculatedPrice={{
+          inputUSD: 0,
+          outputUSD: 0,
+          inputCNY: 0,
+          outputCNY: 0,
+        }}
+        exchangeRate={1}
+        showRealPrice={false}
+        showRatioColumn={false}
+        showEndpointTypes={false}
+        userGroup="default"
+        availableGroups={[]}
+        source={profileSource}
+      />,
+    )
+
+    expect(screen.queryByText("modelList:endpointType")).not.toBeInTheDocument()
+    expect(screen.queryByText("chat, responses")).not.toBeInTheDocument()
+  })
+
   it("shows persisted verification status for a profile-backed row", async () => {
     const profileSource = createProfileSource({
       id: "profile-1",
@@ -306,5 +387,92 @@ describe("ModelItem profile actions", () => {
         name: "modelList:expandDetails",
       }),
     ).not.toBeInTheDocument()
+    expect(
+      await screen.findByText("modelList:endpointType"),
+    ).toBeInTheDocument()
+  })
+
+  it("shows endpoint types on expandable account rows without requiring manual expand", async () => {
+    const accountSource = createAccountSource({
+      id: "account-2",
+      name: "Pricing Account",
+      username: "tester",
+      balance: { USD: 10, CNY: 70 },
+      todayConsumption: { USD: 0, CNY: 0 },
+      todayIncome: { USD: 0, CNY: 0 },
+      todayTokens: { upload: 0, download: 0 },
+      health: { status: SiteHealthStatus.Healthy },
+      siteType: "new-api",
+      baseUrl: "https://example.com",
+      token: "token",
+      userId: 1,
+      authType: AuthTypeEnum.AccessToken,
+      checkIn: { enableDetection: false },
+    })
+
+    const { rerender } = render(
+      <ModelItem
+        model={{
+          model_name: "gpt-oss-120b",
+          quota_type: 0,
+          model_ratio: 2.5,
+          model_price: 0,
+          completion_ratio: 2,
+          enable_groups: ["default"],
+          supported_endpoint_types: ["responses"],
+        }}
+        calculatedPrice={{
+          inputUSD: 5,
+          outputUSD: 10,
+          inputCNY: 35,
+          outputCNY: 70,
+        }}
+        exchangeRate={7}
+        showRealPrice={false}
+        showRatioColumn={true}
+        showEndpointTypes={true}
+        userGroup="default"
+        availableGroups={["default"]}
+        source={accountSource}
+      />,
+    )
+
+    expect(
+      await screen.findByRole("button", {
+        name: "modelList:expandDetails",
+      }),
+    ).toBeInTheDocument()
+    expect(screen.getByText("modelList:endpointType")).toBeInTheDocument()
+    expect(screen.getByText("responses")).toBeInTheDocument()
+
+    rerender(
+      <ModelItem
+        model={{
+          model_name: "gpt-oss-120b",
+          quota_type: 0,
+          model_ratio: 2.5,
+          model_price: 0,
+          completion_ratio: 2,
+          enable_groups: ["default"],
+          supported_endpoint_types: ["responses"],
+        }}
+        calculatedPrice={{
+          inputUSD: 5,
+          outputUSD: 10,
+          inputCNY: 35,
+          outputCNY: 70,
+        }}
+        exchangeRate={7}
+        showRealPrice={false}
+        showRatioColumn={true}
+        showEndpointTypes={false}
+        userGroup="default"
+        availableGroups={["default"]}
+        source={accountSource}
+      />,
+    )
+
+    expect(screen.queryByText("modelList:endpointType")).not.toBeInTheDocument()
+    expect(screen.queryByText("responses")).not.toBeInTheDocument()
   })
 })
